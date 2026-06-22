@@ -8,6 +8,7 @@ const windNode = document.querySelector("#wind");
 const resetButton = document.querySelector("#reset");
 const drawButton = document.querySelector("#draw");
 const fireButton = document.querySelector("#fire");
+const aimPad = document.querySelector("#aim-pad");
 
 const stages = [
   { targetY: 345, wind: 0 },
@@ -36,7 +37,9 @@ const state = {
 
 const bow = { x: 155, y: 430 };
 const target = { x: 1020, y: stages[0].targetY, radius: 92 };
+const touchAimBounds = { minX: 620, maxX: 1120, minY: 120, maxY: 620 };
 let lastFrame = performance.now();
+let activeAimPointerId = null;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -52,6 +55,39 @@ function updateHud() {
   arrowsNode.textContent = String(state.arrows);
   bestNode.textContent = String(state.best);
   windNode.textContent = formatWind(state.wind);
+}
+
+function updateDrawControl() {
+  drawButton.setAttribute("aria-pressed", String(state.drawing));
+}
+
+function updateAimPad() {
+  const x = clamp(
+    (state.pointer.x - touchAimBounds.minX) / (touchAimBounds.maxX - touchAimBounds.minX),
+    0,
+    1
+  );
+  const y = clamp(
+    (state.pointer.y - touchAimBounds.minY) / (touchAimBounds.maxY - touchAimBounds.minY),
+    0,
+    1
+  );
+
+  aimPad.style.setProperty("--aim-x", `${x * 100}%`);
+  aimPad.style.setProperty("--aim-y", `${y * 100}%`);
+}
+
+function setAimFromPad(event) {
+  event.preventDefault();
+  const rect = aimPad.getBoundingClientRect();
+  const x = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+  const y = clamp((event.clientY - rect.top) / rect.height, 0, 1);
+
+  state.pointer = {
+    x: touchAimBounds.minX + x * (touchAimBounds.maxX - touchAimBounds.minX),
+    y: touchAimBounds.minY + y * (touchAimBounds.maxY - touchAimBounds.minY)
+  };
+  updateAimPad();
 }
 
 function canvasPoint(event) {
@@ -73,6 +109,7 @@ function startDraw() {
   if (state.arrows <= 0 || state.drawing) return;
   state.drawing = true;
   state.drawStart = performance.now();
+  updateDrawControl();
 }
 
 function releaseArrow() {
@@ -99,6 +136,7 @@ function releaseArrow() {
     state.pendingProgression = true;
   }
   updateHud();
+  updateDrawControl();
 }
 
 function scoreHit(x, y) {
@@ -111,12 +149,6 @@ function scoreHit(x, y) {
   return 2;
 }
 
-function hitQuality(points) {
-  if (points === 10) return "bullseye";
-  if (points === 2) return "outer";
-  return "hit";
-}
-
 function registerHit(arrow) {
   const points = scoreHit(arrow.x, arrow.y);
   if (!points) return false;
@@ -124,7 +156,7 @@ function registerHit(arrow) {
   state.score += points;
   state.best = Math.max(state.best, state.score);
   localStorage.setItem("archery-best", String(state.best));
-  state.hits.push({ x: arrow.x, y: arrow.y, points, quality: hitQuality(points), age: 0 });
+  state.hits.push({ x: arrow.x, y: arrow.y, points, age: 0 });
   updateHud();
   return true;
 }
@@ -144,6 +176,7 @@ function resetRound() {
   state.notice = "";
   state.noticeTimer = 0;
   updateHud();
+  updateDrawControl();
 }
 
 function advanceProgression() {
@@ -307,37 +340,9 @@ function drawArrow(arrow) {
 function drawHits() {
   for (const hit of state.hits) {
     const alpha = clamp(1.4 - hit.age, 0, 1);
-    const pulse = 1 + hit.age * 54;
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    if (hit.quality === "bullseye") {
-      ctx.strokeStyle = "#ffd84f";
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.arc(hit.x, hit.y, 24 + pulse, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "#14231c";
-      ctx.font = "800 30px system-ui";
-      ctx.fillText("Bullseye", hit.x + 18, hit.y - 22);
-    } else if (hit.quality === "outer") {
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 3;
-      ctx.setLineDash([8, 7]);
-      ctx.beginPath();
-      ctx.arc(hit.x, hit.y, 14 + pulse * 0.65, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "#f5f0df";
-      ctx.font = "700 24px system-ui";
-      ctx.fillText("Outer", hit.x + 16, hit.y - 16);
-    } else {
-      ctx.fillStyle = "#14231c";
-    }
-
-    ctx.fillStyle = hit.quality === "outer" ? "#f5f0df" : "#14231c";
+    ctx.fillStyle = `rgba(20, 35, 28, ${alpha})`;
     ctx.font = "700 28px system-ui";
-    ctx.fillText(`+${hit.points}`, hit.x + 18, hit.y + 16);
-    ctx.restore();
+    ctx.fillText(`+${hit.points}`, hit.x + 16, hit.y - 16);
   }
 }
 
@@ -384,17 +389,12 @@ function render() {
 
   if (state.arrows === 0 && state.arrowsInFlight.every((arrow) => arrow.stuck)) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
-    ctx.fillRect(414, 270, 372, 144);
-    ctx.strokeStyle = "rgba(20, 35, 28, 0.18)";
-    ctx.strokeRect(414, 270, 372, 144);
+    ctx.fillRect(428, 286, 344, 110);
     ctx.fillStyle = "#14231c";
-    ctx.font = "700 32px system-ui";
-    ctx.fillText("Round complete", 474, 318);
-    ctx.font = "700 22px system-ui";
-    ctx.fillText(`Final ${state.score}`, 466, 360);
-    ctx.fillText(`Best ${state.best}`, 620, 360);
-    ctx.font = "500 16px system-ui";
-    ctx.fillText("Reset starts a new round", 502, 390);
+    ctx.font = "700 34px system-ui";
+    ctx.fillText("Round complete", 474, 332);
+    ctx.font = "500 18px system-ui";
+    ctx.fillText("Press Reset to play again", 501, 368);
   }
 }
 
@@ -408,10 +408,12 @@ function frame(now) {
 
 canvas.addEventListener("pointermove", (event) => {
   state.pointer = canvasPoint(event);
+  updateAimPad();
 });
 
 canvas.addEventListener("pointerdown", (event) => {
   state.pointer = canvasPoint(event);
+  updateAimPad();
   canvas.setPointerCapture(event.pointerId);
   startDraw();
 });
@@ -419,6 +421,31 @@ canvas.addEventListener("pointerdown", (event) => {
 canvas.addEventListener("pointerup", releaseArrow);
 canvas.addEventListener("pointercancel", () => {
   state.drawing = false;
+  updateDrawControl();
+});
+
+aimPad.addEventListener("pointerdown", (event) => {
+  activeAimPointerId = event.pointerId;
+  aimPad.setPointerCapture(event.pointerId);
+  setAimFromPad(event);
+});
+
+aimPad.addEventListener("pointermove", (event) => {
+  if (activeAimPointerId === event.pointerId) {
+    setAimFromPad(event);
+  }
+});
+
+aimPad.addEventListener("pointerup", (event) => {
+  if (activeAimPointerId === event.pointerId) {
+    activeAimPointerId = null;
+  }
+});
+
+aimPad.addEventListener("pointercancel", (event) => {
+  if (activeAimPointerId === event.pointerId) {
+    activeAimPointerId = null;
+  }
 });
 
 window.addEventListener("keydown", (event) => {
@@ -436,9 +463,17 @@ window.addEventListener("keyup", (event) => {
 });
 
 resetButton.addEventListener("click", resetRound);
-drawButton.addEventListener("pointerdown", startDraw);
-drawButton.addEventListener("pointerup", releaseArrow);
+drawButton.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  startDraw();
+});
+drawButton.addEventListener("click", startDraw);
+fireButton.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  releaseArrow();
+});
 fireButton.addEventListener("click", releaseArrow);
 
 updateHud();
+updateAimPad();
 requestAnimationFrame(frame);
