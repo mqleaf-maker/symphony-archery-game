@@ -4,9 +4,17 @@ const ctx = canvas.getContext("2d");
 const scoreNode = document.querySelector("#score");
 const arrowsNode = document.querySelector("#arrows");
 const bestNode = document.querySelector("#best");
+const windNode = document.querySelector("#wind");
 const resetButton = document.querySelector("#reset");
 const drawButton = document.querySelector("#draw");
 const fireButton = document.querySelector("#fire");
+
+const stages = [
+  { targetY: 345, wind: 0 },
+  { targetY: 282, wind: 42 },
+  { targetY: 418, wind: -38 },
+  { targetY: 326, wind: 54 }
+];
 
 const state = {
   score: 0,
@@ -18,21 +26,32 @@ const state = {
   power: 0,
   arrowsInFlight: [],
   hits: [],
-  wind: 0.06
+  wind: stages[0].wind,
+  shotsFired: 0,
+  stageIndex: 0,
+  pendingProgression: false,
+  notice: "",
+  noticeTimer: 0
 };
 
 const bow = { x: 155, y: 430 };
-const target = { x: 1020, y: 345, radius: 92 };
+const target = { x: 1020, y: stages[0].targetY, radius: 92 };
 let lastFrame = performance.now();
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function formatWind(wind) {
+  if (wind === 0) return "Calm";
+  return `${wind > 0 ? "R" : "L"} ${Math.abs(wind)}`;
+}
+
 function updateHud() {
   scoreNode.textContent = String(state.score);
   arrowsNode.textContent = String(state.arrows);
   bestNode.textContent = String(state.best);
+  windNode.textContent = formatWind(state.wind);
 }
 
 function canvasPoint(event) {
@@ -75,6 +94,10 @@ function releaseArrow() {
   state.drawing = false;
   state.power = 0;
   state.arrows -= 1;
+  state.shotsFired += 1;
+  if (state.shotsFired % 3 === 0 && state.arrows > 0) {
+    state.pendingProgression = true;
+  }
   updateHud();
 }
 
@@ -107,6 +130,27 @@ function resetRound() {
   state.power = 0;
   state.arrowsInFlight = [];
   state.hits = [];
+  state.shotsFired = 0;
+  state.stageIndex = 0;
+  state.pendingProgression = false;
+  state.wind = stages[0].wind;
+  target.y = stages[0].targetY;
+  state.notice = "";
+  state.noticeTimer = 0;
+  updateHud();
+}
+
+function advanceProgression() {
+  state.pendingProgression = false;
+  state.stageIndex = Math.min(state.stageIndex + 1, stages.length - 1);
+
+  const nextStage = stages[state.stageIndex];
+  target.y = nextStage.targetY;
+  state.wind = nextStage.wind;
+  state.arrowsInFlight = state.arrowsInFlight.filter((arrow) => !arrow.stuck);
+  state.hits = [];
+  state.notice = `Target shifted - Wind ${formatWind(state.wind)}`;
+  state.noticeTimer = 2.1;
   updateHud();
 }
 
@@ -137,9 +181,16 @@ function update(dt) {
     return arrow.stuck || (arrow.x < canvas.width + 80 && arrow.y < canvas.height + 80);
   });
 
+  const hasLiveArrow = state.arrowsInFlight.some((arrow) => !arrow.stuck);
+  if (state.pendingProgression && !hasLiveArrow) {
+    advanceProgression();
+  }
+
   for (const hit of state.hits) {
     hit.age += dt;
   }
+
+  state.noticeTimer = Math.max(0, state.noticeTimer - dt);
 }
 
 function drawBackground() {
@@ -256,6 +307,24 @@ function drawHits() {
   }
 }
 
+function drawNotice() {
+  if (!state.notice || state.noticeTimer <= 0) return;
+
+  const alpha = clamp(state.noticeTimer / 0.35, 0, 1);
+  ctx.save();
+  ctx.font = "700 24px system-ui";
+  const width = ctx.measureText(state.notice).width + 52;
+  const x = canvas.width / 2 - width / 2;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+  ctx.fillRect(x, 24, width, 52);
+  ctx.strokeStyle = "rgba(20, 35, 28, 0.2)";
+  ctx.strokeRect(x, 24, width, 52);
+  ctx.fillStyle = "#14231c";
+  ctx.fillText(state.notice, x + 26, 58);
+  ctx.restore();
+}
+
 function drawAimGuide() {
   if (!state.drawing) return;
   const aim = aimVector();
@@ -277,6 +346,7 @@ function render() {
   drawBow();
   for (const arrow of state.arrowsInFlight) drawArrow(arrow);
   drawHits();
+  drawNotice();
 
   if (state.arrows === 0 && state.arrowsInFlight.every((arrow) => arrow.stuck)) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
