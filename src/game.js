@@ -5,10 +5,10 @@ const scoreNode = document.querySelector("#score");
 const arrowsNode = document.querySelector("#arrows");
 const bestNode = document.querySelector("#best");
 const windNode = document.querySelector("#wind");
+const audioButton = document.querySelector("#audio");
 const resetButton = document.querySelector("#reset");
 const drawButton = document.querySelector("#draw");
 const fireButton = document.querySelector("#fire");
-const aimPad = document.querySelector("#aim-pad");
 
 const stages = [
   { targetY: 345, wind: 0 },
@@ -37,9 +37,12 @@ const state = {
 
 const bow = { x: 155, y: 430 };
 const target = { x: 1020, y: stages[0].targetY, radius: 92 };
-const touchAimBounds = { minX: 620, maxX: 1120, minY: 120, maxY: 620 };
+const audio = {
+  context: null,
+  enabled: false,
+  unavailable: false
+};
 let lastFrame = performance.now();
-let activeAimPointerId = null;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -57,37 +60,92 @@ function updateHud() {
   windNode.textContent = formatWind(state.wind);
 }
 
-function updateDrawControl() {
-  drawButton.setAttribute("aria-pressed", String(state.drawing));
+function updateAudioButton() {
+  audioButton.disabled = audio.unavailable;
+  audioButton.textContent = audio.unavailable ? "Audio N/A" : `Audio ${audio.enabled ? "On" : "Off"}`;
+  audioButton.setAttribute("aria-pressed", String(audio.enabled));
+  audioButton.setAttribute(
+    "aria-label",
+    audio.enabled ? "Disable sound effects" : "Enable sound effects"
+  );
 }
 
-function updateAimPad() {
-  const x = clamp(
-    (state.pointer.x - touchAimBounds.minX) / (touchAimBounds.maxX - touchAimBounds.minX),
-    0,
-    1
-  );
-  const y = clamp(
-    (state.pointer.y - touchAimBounds.minY) / (touchAimBounds.maxY - touchAimBounds.minY),
-    0,
-    1
-  );
+function getAudioContext() {
+  if (audio.unavailable) return null;
 
-  aimPad.style.setProperty("--aim-x", `${x * 100}%`);
-  aimPad.style.setProperty("--aim-y", `${y * 100}%`);
+  const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) {
+    audio.unavailable = true;
+    updateAudioButton();
+    return null;
+  }
+
+  if (!audio.context) {
+    try {
+      audio.context = new AudioContextConstructor();
+    } catch {
+      audio.unavailable = true;
+      updateAudioButton();
+      return null;
+    }
+  }
+
+  return audio.context;
 }
 
-function setAimFromPad(event) {
-  event.preventDefault();
-  const rect = aimPad.getBoundingClientRect();
-  const x = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-  const y = clamp((event.clientY - rect.top) / rect.height, 0, 1);
+async function enableAudio() {
+  const context = getAudioContext();
+  if (!context) return;
 
-  state.pointer = {
-    x: touchAimBounds.minX + x * (touchAimBounds.maxX - touchAimBounds.minX),
-    y: touchAimBounds.minY + y * (touchAimBounds.maxY - touchAimBounds.minY)
-  };
-  updateAimPad();
+  try {
+    if (context.state === "suspended") {
+      await context.resume();
+    }
+    audio.enabled = context.state !== "closed";
+  } catch {
+    audio.enabled = false;
+  }
+
+  updateAudioButton();
+}
+
+function playTone({ frequency, endFrequency = frequency, duration, gain, type = "sine" }) {
+  if (!audio.enabled) return;
+
+  const context = getAudioContext();
+  if (!context || context.state !== "running") return;
+
+  try {
+    const now = context.currentTime;
+    const oscillator = context.createOscillator();
+    const volume = context.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(endFrequency, now + duration);
+
+    volume.gain.setValueAtTime(0.0001, now);
+    volume.gain.exponentialRampToValueAtTime(gain, now + 0.015);
+    volume.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    oscillator.connect(volume);
+    volume.connect(context.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.02);
+  } catch {
+    audio.enabled = false;
+    updateAudioButton();
+  }
+}
+
+function playSound(name) {
+  if (name === "draw") {
+    playTone({ frequency: 180, endFrequency: 245, duration: 0.12, gain: 0.025, type: "triangle" });
+  } else if (name === "fire") {
+    playTone({ frequency: 360, endFrequency: 150, duration: 0.16, gain: 0.04, type: "sawtooth" });
+  } else if (name === "hit") {
+    playTone({ frequency: 520, endFrequency: 720, duration: 0.18, gain: 0.035, type: "sine" });
+  }
 }
 
 function canvasPoint(event) {
@@ -109,7 +167,7 @@ function startDraw() {
   if (state.arrows <= 0 || state.drawing) return;
   state.drawing = true;
   state.drawStart = performance.now();
-  updateDrawControl();
+  playSound("draw");
 }
 
 function releaseArrow() {
@@ -128,6 +186,7 @@ function releaseArrow() {
     stuck: false
   });
 
+  playSound("fire");
   state.drawing = false;
   state.power = 0;
   state.arrows -= 1;
@@ -136,7 +195,6 @@ function releaseArrow() {
     state.pendingProgression = true;
   }
   updateHud();
-  updateDrawControl();
 }
 
 function scoreHit(x, y) {
@@ -157,6 +215,7 @@ function registerHit(arrow) {
   state.best = Math.max(state.best, state.score);
   localStorage.setItem("archery-best", String(state.best));
   state.hits.push({ x: arrow.x, y: arrow.y, points, age: 0 });
+  playSound("hit");
   updateHud();
   return true;
 }
@@ -176,7 +235,6 @@ function resetRound() {
   state.notice = "";
   state.noticeTimer = 0;
   updateHud();
-  updateDrawControl();
 }
 
 function advanceProgression() {
@@ -408,12 +466,10 @@ function frame(now) {
 
 canvas.addEventListener("pointermove", (event) => {
   state.pointer = canvasPoint(event);
-  updateAimPad();
 });
 
 canvas.addEventListener("pointerdown", (event) => {
   state.pointer = canvasPoint(event);
-  updateAimPad();
   canvas.setPointerCapture(event.pointerId);
   startDraw();
 });
@@ -421,31 +477,6 @@ canvas.addEventListener("pointerdown", (event) => {
 canvas.addEventListener("pointerup", releaseArrow);
 canvas.addEventListener("pointercancel", () => {
   state.drawing = false;
-  updateDrawControl();
-});
-
-aimPad.addEventListener("pointerdown", (event) => {
-  activeAimPointerId = event.pointerId;
-  aimPad.setPointerCapture(event.pointerId);
-  setAimFromPad(event);
-});
-
-aimPad.addEventListener("pointermove", (event) => {
-  if (activeAimPointerId === event.pointerId) {
-    setAimFromPad(event);
-  }
-});
-
-aimPad.addEventListener("pointerup", (event) => {
-  if (activeAimPointerId === event.pointerId) {
-    activeAimPointerId = null;
-  }
-});
-
-aimPad.addEventListener("pointercancel", (event) => {
-  if (activeAimPointerId === event.pointerId) {
-    activeAimPointerId = null;
-  }
 });
 
 window.addEventListener("keydown", (event) => {
@@ -463,17 +494,18 @@ window.addEventListener("keyup", (event) => {
 });
 
 resetButton.addEventListener("click", resetRound);
-drawButton.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-  startDraw();
+audioButton.addEventListener("click", () => {
+  if (audio.enabled) {
+    audio.enabled = false;
+    updateAudioButton();
+  } else {
+    void enableAudio();
+  }
 });
-drawButton.addEventListener("click", startDraw);
-fireButton.addEventListener("pointerdown", (event) => {
-  event.preventDefault();
-  releaseArrow();
-});
+drawButton.addEventListener("pointerdown", startDraw);
+drawButton.addEventListener("pointerup", releaseArrow);
 fireButton.addEventListener("click", releaseArrow);
 
+updateAudioButton();
 updateHud();
-updateAimPad();
 requestAnimationFrame(frame);

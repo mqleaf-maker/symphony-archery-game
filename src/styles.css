@@ -47,7 +47,7 @@ button:hover {
 
 .scorebar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
   align-items: center;
   gap: 10px;
   min-height: 64px;
@@ -55,8 +55,7 @@ button:hover {
 
 .scorebar > div,
 .scorebar > button,
-.touch-controls button,
-.aim-pad {
+.touch-controls > button {
   box-shadow: 0 8px 24px rgba(43, 74, 55, 0.12);
 }
 
@@ -84,7 +83,6 @@ strong {
 
 canvas {
   width: 100%;
-  height: auto;
   aspect-ratio: 5 / 3;
   display: block;
   border: 1px solid rgba(20, 35, 28, 0.18);
@@ -96,47 +94,8 @@ canvas {
 
 .touch-controls {
   display: none;
-  gap: 10px;
-}
-
-.aim-pad {
-  --aim-x: 72%;
-  --aim-y: 35%;
-  position: relative;
-  min-height: 88px;
-  border: 1px solid rgba(20, 35, 28, 0.14);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, transparent 49%, rgba(20, 35, 28, 0.12) 50%, transparent 51%),
-    linear-gradient(0deg, transparent 49%, rgba(20, 35, 28, 0.12) 50%, transparent 51%),
-    rgba(255, 255, 255, 0.84);
-  cursor: crosshair;
-  touch-action: none;
-}
-
-.aim-dot {
-  position: absolute;
-  left: var(--aim-x);
-  top: var(--aim-y);
-  width: 22px;
-  height: 22px;
-  border: 3px solid #ffffff;
-  border-radius: 999px;
-  background: #14231c;
-  box-shadow: 0 4px 12px rgba(20, 35, 28, 0.28);
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-}
-
-.shot-buttons {
-  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-}
-
-#draw[aria-pressed="true"] {
-  background: #14231c;
-  color: #ffffff;
 }
 
 @media (max-width: 620px) {
@@ -149,36 +108,14 @@ canvas {
   }
 
   .scorebar > button {
-    grid-column: span 2;
+    grid-column: auto;
   }
 
   .touch-controls {
     display: grid;
-    grid-template-columns: 1fr;
   }
 
   strong {
     font-size: 20px;
-  }
-}
-
-@media (max-width: 420px) {
-  body {
-    padding: 8px;
-  }
-
-  .game-shell,
-  .scorebar,
-  .touch-controls,
-  .shot-buttons {
-    gap: 8px;
-  }
-
-  .scorebar > div {
-    padding: 8px 10px;
-  }
-
-  button {
-    padding: 0 12px;
   }
 }
