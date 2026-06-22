@@ -39,6 +39,16 @@ Symphony copies the project `.env` into each issue workspace and the PR helper
 loads it before pushing. This gives the agent only the project-specific GitHub
 settings needed for this experiment.
 
+HTTPS remotes are supported and are the simplest option for this PoC:
+
+```bash
+GITHUB_REPO_URL=https://github.com/<owner>/<repo>.git
+```
+
+When the `github` remote uses HTTPS, the helper uses `GITHUB_TOKEN` through a
+temporary `GIT_ASKPASS` script for that push only. It does not write GitHub
+credentials into the global Git credential store.
+
 If Linear is already connected to GitHub, the `SYM-*` issue key in the branch
 name and PR title should let Linear associate the PR with the issue. That
 integration does not replace the local GitHub credentials needed to push a
