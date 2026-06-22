@@ -25,6 +25,10 @@ hooks:
       . "$ENV_FILE"
       set +a
     fi
+    if [ "$(find . -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" != "0" ]; then
+      echo "Workspace is not empty before clone; refusing to overwrite it." >&2
+      exit 1
+    fi
     git clone --depth 1 "${SYMPHONY_SOURCE_REPO_URL:-file:///Users/minxuan/Documents/learning/symphony-archery-game}" .
     if [ -f "$ENV_FILE" ]; then
       cp "$ENV_FILE" .env
@@ -39,16 +43,57 @@ hooks:
   before_run: |
     set -eu
     ENV_FILE="${SYMPHONY_ENV_FILE:-/Users/minxuan/Documents/learning/symphony-archery-game/.env}"
-    if [ -f "$ENV_FILE" ]; then
-      cp "$ENV_FILE" .env
-      chmod 600 .env
-      set -a
-      . ./.env
-      set +a
-    elif [ -f .env ]; then
-      set -a
-      . ./.env
-      set +a
+    load_env() {
+      if [ -f "$ENV_FILE" ]; then
+        cp "$ENV_FILE" .env
+        chmod 600 .env
+        set -a
+        . ./.env
+        set +a
+      elif [ -f .env ]; then
+        set -a
+        . ./.env
+        set +a
+      fi
+    }
+
+    promote_repo_dir() {
+      if [ -f .env ] && [ ! -f repo/.env ]; then
+        cp .env repo/.env
+        chmod 600 repo/.env
+      fi
+      find repo -mindepth 1 -maxdepth 1 -exec mv {} . \;
+      rmdir repo
+    }
+
+    ensure_repo_workspace() {
+      if [ -d .git ] && [ -f package.json ]; then
+        return
+      fi
+
+      if [ -d repo/.git ] && [ -f repo/package.json ]; then
+        extra_entry="$(find . -mindepth 1 -maxdepth 1 ! -name .env ! -name repo | head -n 1)"
+        if [ -n "$extra_entry" ]; then
+          echo "Workspace is missing .git but contains unexpected files; refusing to self-heal: $extra_entry" >&2
+          exit 1
+        fi
+        promote_repo_dir
+        return
+      fi
+
+      extra_entry="$(find . -mindepth 1 -maxdepth 1 ! -name .env | head -n 1)"
+      if [ -n "$extra_entry" ]; then
+        echo "Workspace is missing .git but contains unexpected files; refusing to self-heal: $extra_entry" >&2
+        exit 1
+      fi
+      git clone --depth 1 "${SYMPHONY_SOURCE_REPO_URL:-file:///Users/minxuan/Documents/learning/symphony-archery-game}" repo
+      promote_repo_dir
+    }
+
+    load_env
+    ensure_repo_workspace
+    if git remote get-url origin >/dev/null 2>&1 && ! git remote get-url source >/dev/null 2>&1; then
+      git remote rename origin source
     fi
     if [ -n "${GITHUB_REPO_URL:-}" ]; then
       if git remote get-url github >/dev/null 2>&1; then
