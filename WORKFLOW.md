@@ -19,16 +19,49 @@ workspace:
 hooks:
   after_create: |
     set -eu
+    ENV_FILE="${SYMPHONY_ENV_FILE:-/Users/minxuan/Documents/learning/symphony-archery-game/.env}"
+    if [ -f "$ENV_FILE" ]; then
+      set -a
+      . "$ENV_FILE"
+      set +a
+    fi
     git clone --depth 1 "${SYMPHONY_SOURCE_REPO_URL:-file:///Users/minxuan/Documents/learning/symphony-archery-game}" .
+    if [ -f "$ENV_FILE" ]; then
+      cp "$ENV_FILE" .env
+      chmod 600 .env
+    fi
     git remote rename origin source 2>/dev/null || true
     if [ -n "${GITHUB_REPO_URL:-}" ]; then
       git remote add github "$GITHUB_REPO_URL"
     fi
     git config --local user.name "${SYMPHONY_GIT_AUTHOR_NAME:-Symphony Bot}"
     git config --local user.email "${SYMPHONY_GIT_AUTHOR_EMAIL:-symphony-bot@users.noreply.github.com}"
+  before_run: |
+    set -eu
+    ENV_FILE="${SYMPHONY_ENV_FILE:-/Users/minxuan/Documents/learning/symphony-archery-game/.env}"
+    if [ -f "$ENV_FILE" ]; then
+      cp "$ENV_FILE" .env
+      chmod 600 .env
+      set -a
+      . ./.env
+      set +a
+    elif [ -f .env ]; then
+      set -a
+      . ./.env
+      set +a
+    fi
+    if [ -n "${GITHUB_REPO_URL:-}" ]; then
+      if git remote get-url github >/dev/null 2>&1; then
+        git remote set-url github "$GITHUB_REPO_URL"
+      else
+        git remote add github "$GITHUB_REPO_URL"
+      fi
+    fi
+    git config --local user.name "${SYMPHONY_GIT_AUTHOR_NAME:-Symphony Bot}"
+    git config --local user.email "${SYMPHONY_GIT_AUTHOR_EMAIL:-symphony-bot@users.noreply.github.com}"
 agent:
   max_concurrent_agents: 1
-  max_turns: 1
+  max_turns: 3
   max_retry_backoff_ms: 600000
 codex:
   command: codex --config shell_environment_policy.inherit=all app-server

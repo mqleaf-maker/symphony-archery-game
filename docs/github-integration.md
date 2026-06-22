@@ -17,16 +17,32 @@ These commands only edit this repository's `.git/config`. They do not touch
 
 ## Environment variables
 
-Set these in your shell when you want Symphony to create GitHub PRs:
+Create a project-local `.env` file when you want Symphony to create GitHub PRs:
 
 ```bash
-export GITHUB_REPO_URL=git@github.com:<owner>/<repo>.git
-export GITHUB_REPOSITORY=<owner>/<repo>
-export GITHUB_TOKEN=<github-token-with-repo-access>
-export GITHUB_BASE_BRANCH=main
+cp .env.example .env
+```
+
+Then edit `.env`:
+
+```bash
+GITHUB_REPO_URL=git@github.com:<owner>/<repo>.git
+GITHUB_REPOSITORY=<owner>/<repo>
+GITHUB_TOKEN=<github-token-with-repo-access>
+GITHUB_BASE_BRANCH=main
 ```
 
 Do not commit tokens. `.env` and `.env.*` are ignored for local experiments.
+`.env.example` is intentionally committed as a non-secret template.
+
+Symphony copies the project `.env` into each issue workspace and the PR helper
+loads it before pushing. This gives the agent only the project-specific GitHub
+settings needed for this experiment.
+
+If Linear is already connected to GitHub, the `SYM-*` issue key in the branch
+name and PR title should let Linear associate the PR with the issue. That
+integration does not replace the local GitHub credentials needed to push a
+branch and create the PR.
 
 ## PR helper
 
