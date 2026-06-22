@@ -13,15 +13,23 @@ tracker:
     - Cancelled
     - Duplicate
 polling:
-  interval_ms: 7000
+  interval_ms: 30000
 workspace:
   root: /Users/minxuan/Documents/learning/symphony-archery-game/symphony-workspaces
 hooks:
   after_create: |
-    git clone --depth 1 file:///Users/minxuan/Documents/learning/symphony-archery-game .
+    set -eu
+    git clone --depth 1 "${SYMPHONY_SOURCE_REPO_URL:-file:///Users/minxuan/Documents/learning/symphony-archery-game}" .
+    git remote rename origin source 2>/dev/null || true
+    if [ -n "${GITHUB_REPO_URL:-}" ]; then
+      git remote add github "$GITHUB_REPO_URL"
+    fi
+    git config --local user.name "${SYMPHONY_GIT_AUTHOR_NAME:-Symphony Bot}"
+    git config --local user.email "${SYMPHONY_GIT_AUTHOR_EMAIL:-symphony-bot@users.noreply.github.com}"
 agent:
   max_concurrent_agents: 1
-  max_turns: 8
+  max_turns: 1
+  max_retry_backoff_ms: 600000
 codex:
   command: codex --config shell_environment_policy.inherit=all app-server
   approval_policy: never
@@ -29,65 +37,37 @@ codex:
   turn_sandbox_policy:
     type: workspaceWrite
     networkAccess: true
+  turn_timeout_ms: 900000
+  read_timeout_ms: 3000
+  stall_timeout_ms: 120000
 ---
 
-You are working on a Linear issue for the `symphony-archery-game` repository.
+You are working on one Linear issue for `symphony-archery-game`.
 
-Issue:
-- Identifier: {{ issue.identifier }}
-- Title: {{ issue.title }}
-- Status: {{ issue.state }}
-- URL: {{ issue.url }}
+Issue: {{ issue.identifier }} - {{ issue.title }}
+Status: {{ issue.state }}
+URL: {{ issue.url }}
 
-Description:
 {% if issue.description %}
+Description:
 {{ issue.description }}
-{% else %}
-No description provided.
 {% endif %}
 
 ## Mission
 
-Work autonomously in the repository copy that Symphony created for this issue.
-Keep the implementation small, visible, and easy to validate.
+Finish this in one focused turn. Keep the change small.
 
-## Project Rules
+Required steps:
 
-- Read `AGENTS.md` before editing.
-- Prefer dependency-free HTML, CSS, and JavaScript.
-- Keep gameplay in `src/game.js`.
-- Keep visual styling in `src/styles.css`.
-- Do not add build tooling unless the issue explicitly asks for it.
-- Run `npm test` before finishing.
-- If you change gameplay or UI behavior, describe the manual browser validation path in your final update.
+1. Move `Todo` issues to `In Progress`.
+2. Read `AGENTS.md`.
+3. Implement only what the issue asks for.
+4. Run `npm test`.
+5. If tests pass, run:
+   `npm run github:pr -- {{ issue.identifier }} "{{ issue.title }}"`
+6. Add one Linear comment with changed files, validation, PR URL, and residual risk.
+7. Move the issue to `Done` only when `npm test` passes and a GitHub PR URL was created or found.
 
-## Status Handling
+If blocked by missing GitHub remote/token/repository or unclear requirements, comment the blocker in Linear and leave the issue in `In Progress`.
 
-- If the issue is `Todo`, move it to `In Progress` before implementation.
-- If you are blocked by missing requirements, explain the blocker in a Linear comment and leave the issue in `In Progress`.
-- If implementation and validation are complete, add a concise Linear comment with:
-  - changed files,
-  - validation run,
-  - manual QA notes,
-  - any residual risk.
-- After that, move the issue to `Done`.
-
-## Local Validation
-
-Run:
-
-```bash
-npm test
-```
-
-For UI/gameplay changes, also reason through this manual path:
-
-1. Start the app with `npm run dev`.
-2. Open `http://localhost:5173`.
-3. Draw the bow with pointer or space bar.
-4. Release an arrow.
-5. Confirm score, arrow count, and reset behavior still work.
-
-## Final Response
-
-Report only what changed, what validation passed, and any blocker or risk.
+Budget: target under 80k tokens. Do not start broad refactors, dependency changes, or extra exploratory work.

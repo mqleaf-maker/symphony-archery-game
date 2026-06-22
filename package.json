@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "python3 -m http.server 5173",
     "test": "node scripts/validate.mjs",
-    "validate": "npm run test"
+    "validate": "npm run test",
+    "github:pr": "node scripts/github-pr.mjs"
   }
 }
