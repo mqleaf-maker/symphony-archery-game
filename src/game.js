@@ -111,6 +111,12 @@ function scoreHit(x, y) {
   return 2;
 }
 
+function hitQuality(points) {
+  if (points === 10) return "bullseye";
+  if (points === 2) return "outer";
+  return "hit";
+}
+
 function registerHit(arrow) {
   const points = scoreHit(arrow.x, arrow.y);
   if (!points) return false;
@@ -118,7 +124,7 @@ function registerHit(arrow) {
   state.score += points;
   state.best = Math.max(state.best, state.score);
   localStorage.setItem("archery-best", String(state.best));
-  state.hits.push({ x: arrow.x, y: arrow.y, points, age: 0 });
+  state.hits.push({ x: arrow.x, y: arrow.y, points, quality: hitQuality(points), age: 0 });
   updateHud();
   return true;
 }
@@ -301,9 +307,37 @@ function drawArrow(arrow) {
 function drawHits() {
   for (const hit of state.hits) {
     const alpha = clamp(1.4 - hit.age, 0, 1);
-    ctx.fillStyle = `rgba(20, 35, 28, ${alpha})`;
+    const pulse = 1 + hit.age * 54;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (hit.quality === "bullseye") {
+      ctx.strokeStyle = "#ffd84f";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(hit.x, hit.y, 24 + pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#14231c";
+      ctx.font = "800 30px system-ui";
+      ctx.fillText("Bullseye", hit.x + 18, hit.y - 22);
+    } else if (hit.quality === "outer") {
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 7]);
+      ctx.beginPath();
+      ctx.arc(hit.x, hit.y, 14 + pulse * 0.65, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#f5f0df";
+      ctx.font = "700 24px system-ui";
+      ctx.fillText("Outer", hit.x + 16, hit.y - 16);
+    } else {
+      ctx.fillStyle = "#14231c";
+    }
+
+    ctx.fillStyle = hit.quality === "outer" ? "#f5f0df" : "#14231c";
     ctx.font = "700 28px system-ui";
-    ctx.fillText(`+${hit.points}`, hit.x + 16, hit.y - 16);
+    ctx.fillText(`+${hit.points}`, hit.x + 18, hit.y + 16);
+    ctx.restore();
   }
 }
 
@@ -350,12 +384,17 @@ function render() {
 
   if (state.arrows === 0 && state.arrowsInFlight.every((arrow) => arrow.stuck)) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
-    ctx.fillRect(428, 286, 344, 110);
+    ctx.fillRect(414, 270, 372, 144);
+    ctx.strokeStyle = "rgba(20, 35, 28, 0.18)";
+    ctx.strokeRect(414, 270, 372, 144);
     ctx.fillStyle = "#14231c";
-    ctx.font = "700 34px system-ui";
-    ctx.fillText("Round complete", 474, 332);
-    ctx.font = "500 18px system-ui";
-    ctx.fillText("Press Reset to play again", 501, 368);
+    ctx.font = "700 32px system-ui";
+    ctx.fillText("Round complete", 474, 318);
+    ctx.font = "700 22px system-ui";
+    ctx.fillText(`Final ${state.score}`, 466, 360);
+    ctx.fillText(`Best ${state.best}`, 620, 360);
+    ctx.font = "500 16px system-ui";
+    ctx.fillText("Reset starts a new round", 502, 390);
   }
 }
 
