@@ -135,6 +135,14 @@ Description:
 
 Finish this in one focused turn. Keep the change small.
 
+Verification scope for this harness run:
+
+- `npm test` is the required validation.
+- Do not use Browser, Playwright, screenshots, or in-app browser automation.
+- Do not start `npm run dev` or any local HTTP server on a fixed port.
+- If a user-facing canvas change would benefit from visual QA, mention that as residual risk in the Linear comment.
+- If the run approaches the 80k token target, stop, comment the blocker, and leave the issue in `In Progress`.
+
 Required steps:
 
 1. Move `Todo` issues to `In Progress`.
