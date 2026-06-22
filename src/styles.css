@@ -1,0 +1,121 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #edf4ee;
+  color: #14231c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
+    #dfeee3;
+}
+
+button {
+  border: 1px solid rgba(20, 35, 28, 0.22);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #14231c;
+  cursor: pointer;
+  font: inherit;
+  min-height: 42px;
+  padding: 0 16px;
+}
+
+button:hover {
+  background: #f6fbf7;
+}
+
+.game-shell {
+  width: min(100%, 1120px);
+  display: grid;
+  gap: 12px;
+}
+
+.scorebar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+}
+
+.scorebar > div,
+.scorebar > button,
+.touch-controls > button {
+  box-shadow: 0 8px 24px rgba(43, 74, 55, 0.12);
+}
+
+.scorebar > div {
+  min-width: 0;
+  border: 1px solid rgba(20, 35, 28, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 10px 12px;
+}
+
+.label {
+  display: block;
+  color: #50655b;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+strong {
+  display: block;
+  font-size: 23px;
+  line-height: 1.15;
+  margin-top: 2px;
+}
+
+canvas {
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  display: block;
+  border: 1px solid rgba(20, 35, 28, 0.18);
+  border-radius: 8px;
+  background: #b7d9ef;
+  box-shadow: 0 18px 48px rgba(43, 74, 55, 0.2);
+  touch-action: none;
+}
+
+.touch-controls {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 620px) {
+  body {
+    padding: 10px;
+  }
+
+  .scorebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scorebar > button {
+    grid-column: span 2;
+  }
+
+  .touch-controls {
+    display: grid;
+  }
+
+  strong {
+    font-size: 20px;
+  }
+}
