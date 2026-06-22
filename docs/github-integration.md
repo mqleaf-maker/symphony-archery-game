@@ -30,10 +30,14 @@ GITHUB_REPO_URL=git@github.com:<owner>/<repo>.git
 GITHUB_REPOSITORY=<owner>/<repo>
 GITHUB_TOKEN=<github-token-with-repo-access>
 GITHUB_BASE_BRANCH=main
+SYMPHONY_GIT_AUTHOR_NAME="Symphony Bot"
+SYMPHONY_GIT_AUTHOR_EMAIL=symphony-bot@users.noreply.github.com
 ```
 
 Do not commit tokens. `.env` and `.env.*` are ignored for local experiments.
 `.env.example` is intentionally committed as a non-secret template.
+Because Symphony sources this file from shell hooks, quote values that contain
+spaces.
 
 Symphony copies the project `.env` into each issue workspace and the PR helper
 loads it before pushing. This gives the agent only the project-specific GitHub
