@@ -1,7 +1,7 @@
 ---
 tracker:
   kind: linear
-  project_slug: "symphony-archery-game-98b7f5980897"
+  project_slug: "98b7f5980897"
   required_labels: []
   active_states:
     - Todo

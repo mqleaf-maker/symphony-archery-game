@@ -3,6 +3,13 @@
 Project: `symphony-archery-game-98b7f5980897`
 Team: `SYM`
 
+Created issues:
+
+- `SYM-5`: https://linear.app/symphony-game/issue/SYM-5/add-target-difficulty-progression
+- `SYM-6`: https://linear.app/symphony-game/issue/SYM-6/improve-hit-feedback-and-round-summary
+- `SYM-7`: https://linear.app/symphony-game/issue/SYM-7/add-mobile-friendly-aiming-polish
+- `SYM-8`: https://linear.app/symphony-game/issue/SYM-8/add-lightweight-audio-toggle
+
 These issues are intentionally small so Symphony can run one agent at a time.
 
 ## Issue 1: Initialize browser archery game baseline
