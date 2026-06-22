@@ -1,5 +1,14 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 function loadDotEnv(path) {
   if (!existsSync(path)) return;
@@ -42,6 +51,7 @@ function git(args, options = {}) {
     stdio: options.stdio || ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
+      ...(options.env || {}),
       GIT_TERMINAL_PROMPT: "0"
     }
   });
@@ -160,6 +170,47 @@ async function createPullRequest() {
   }
 }
 
+function pushBranch(url) {
+  if (!url.startsWith("https://")) {
+    git(["push", "-u", "github", `HEAD:${branch}`], { stdio: "inherit" });
+    return;
+  }
+
+  if (!token) {
+    throw new Error("Set GITHUB_TOKEN to push to the HTTPS GitHub remote.");
+  }
+
+  const askpassDir = mkdtempSync(join(tmpdir(), "symphony-git-askpass-"));
+  const askpassPath = join(askpassDir, "askpass.sh");
+  writeFileSync(
+    askpassPath,
+    [
+      "#!/bin/sh",
+      "case \"$1\" in",
+      "  *Username*) printf '%s\\n' \"x-access-token\" ;;",
+      "  *Password*) printf '%s\\n' \"$GITHUB_TOKEN\" ;;",
+      "  *) printf '%s\\n' \"$GITHUB_TOKEN\" ;;",
+      "esac",
+      ""
+    ].join("\n"),
+    { mode: 0o700 }
+  );
+  chmodSync(askpassPath, 0o700);
+
+  try {
+    git(["push", "-u", "github", `HEAD:${branch}`], {
+      stdio: "inherit",
+      env: {
+        GIT_ASKPASS: askpassPath,
+        SSH_ASKPASS: askpassPath,
+        GIT_TERMINAL_PROMPT: "0"
+      }
+    });
+  } finally {
+    rmSync(askpassDir, { recursive: true, force: true });
+  }
+}
+
 async function main() {
   ensureBranch();
   ensureLocalCommit();
@@ -169,7 +220,7 @@ async function main() {
     throw new Error("Missing repo-local remote named 'github'.");
   }
 
-  git(["push", "-u", "github", `HEAD:${branch}`], { stdio: "inherit" });
+  pushBranch(url);
   await createPullRequest();
 }
 
