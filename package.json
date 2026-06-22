@@ -1,0 +1,12 @@
+{
+  "name": "symphony-archery-game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A small browser archery game prepared as a Symphony orchestration PoC.",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 5173",
+    "test": "node scripts/validate.mjs",
+    "validate": "npm run test"
+  }
+}
