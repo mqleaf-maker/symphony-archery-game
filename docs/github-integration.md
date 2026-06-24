@@ -40,8 +40,8 @@ Because Symphony sources this file from shell hooks, quote values that contain
 spaces.
 
 Symphony copies the project `.env` into each issue workspace and the PR helper
-loads it before pushing. This gives the agent only the project-specific GitHub
-settings needed for this experiment.
+loads it before publishing a PR. This gives the agent only the project-specific
+GitHub settings needed for this experiment.
 
 HTTPS remotes are supported and are the simplest option for this PoC:
 
@@ -49,14 +49,14 @@ HTTPS remotes are supported and are the simplest option for this PoC:
 GITHUB_REPO_URL=https://github.com/<owner>/<repo>.git
 ```
 
-When the `github` remote uses HTTPS, the helper uses `GITHUB_TOKEN` through a
-temporary `GIT_ASKPASS` script for that push only. It does not write GitHub
-credentials into the global Git credential store.
+The helper uses `GITHUB_TOKEN` only for GitHub API requests. It does not write
+GitHub credentials into the global Git credential store and does not need to
+modify your global Git or GitLab configuration.
 
 If Linear is already connected to GitHub, the `SYM-*` issue key in the branch
 name and PR title should let Linear associate the PR with the issue. That
-integration does not replace the local GitHub credentials needed to push a
-branch and create the PR.
+integration does not replace the project-local GitHub token needed to create
+the branch commit and PR.
 
 ## PR helper
 
@@ -68,9 +68,26 @@ npm run github:pr -- SYM-6 "Improve hit feedback and round summary"
 
 The helper:
 
-- creates a branch named `symphony/<issue-id>`;
-- commits the current workspace changes with a temporary commit identity;
-- pushes to the repo-local `github` remote;
+- reads the current workspace changes with `git status`;
+- creates GitHub blobs, a tree, a commit, and a `symphony/<issue-id>` branch
+  through the GitHub API;
 - creates a GitHub PR if `GITHUB_TOKEN` and `GITHUB_REPOSITORY` are set;
-- exits with a blocker if the `github` remote, `GITHUB_TOKEN`, or
-  `GITHUB_REPOSITORY` is missing.
+- returns an existing open PR for the same branch if one already exists;
+- exits with a blocker if `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, or local
+  changes are missing.
+
+It intentionally does not run `git switch`, `git add`, `git commit`, or
+`git push`, and it sets `GIT_OPTIONAL_LOCKS=0` for read-only Git inspection.
+This keeps the handoff compatible with Symphony/Codex workspaces where the
+project `.git` directory may be read-only inside the agent sandbox.
+
+You can verify what would be published without writing to GitHub:
+
+```bash
+npm run github:pr -- --dry-run SYM-6 "Improve hit feedback and round summary"
+```
+
+Symphony creates each issue workspace with `git clone`, so helper changes must
+be committed in the source repository before starting a new Symphony issue run.
+Uncommitted local edits in the source checkout are not copied into new issue
+workspaces.
