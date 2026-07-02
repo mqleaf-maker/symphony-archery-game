@@ -19,6 +19,8 @@ const requiredHtml = [
   'id="score"',
   'id="arrows"',
   'id="reset"',
+  '<button id="draw" type="button" aria-label="Draw bow">Draw</button>',
+  '<button id="fire" type="button" aria-label="Fire arrow">Fire</button>',
   'src="./src/game.js"'
 ];
 
