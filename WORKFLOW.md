@@ -106,7 +106,7 @@ hooks:
     git config --local user.email "${SYMPHONY_GIT_AUTHOR_EMAIL:-symphony-bot@users.noreply.github.com}"
 agent:
   max_concurrent_agents: 1
-  max_turns: 3
+  max_turns: 2
   max_retry_backoff_ms: 600000
 codex:
   command: codex --config shell_environment_policy.inherit=all app-server
@@ -141,7 +141,7 @@ Verification scope for this harness run:
 - Do not use Browser, Playwright, screenshots, or in-app browser automation.
 - Do not start `npm run dev` or any local HTTP server on a fixed port.
 - If a user-facing canvas change would benefit from visual QA, mention that as residual risk in the Linear comment.
-- If the run approaches the 80k token target, stop, comment the blocker, and leave the issue in `In Progress`.
+- If the run approaches the 60k token target, stop, comment the blocker, and leave the issue in `In Progress`.
 
 Required steps:
 
@@ -151,9 +151,10 @@ Required steps:
 4. Run `npm test`.
 5. If tests pass, run:
    `npm run github:pr -- {{ issue.identifier }} "{{ issue.title }}"`
-6. Add one Linear comment with changed files, validation, PR URL, and residual risk.
-7. Move the issue to `Done` only when `npm test` passes and a GitHub PR URL was created or found.
+6. If `npm test` passes and a GitHub PR URL was created or found, move the issue to `Human Review` if that state exists.
+7. If `Human Review` does not exist, make one fallback attempt to move the issue to `Done`.
+8. Add one Linear comment with changed files, validation, PR URL, residual risk, and the exact handoff state used. If the fallback state is `Done`, state that `Done` means "ready for human review" for this PoC, not "merged to production".
 
 If blocked by missing GitHub remote/token/repository or unclear requirements, comment the blocker in Linear and leave the issue in `In Progress`.
 
-Budget: target under 80k tokens. Do not start broad refactors, dependency changes, or extra exploratory work.
+Budget: target under 60k tokens. Do not start broad refactors, dependency changes, or extra exploratory work.

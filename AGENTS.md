@@ -11,7 +11,8 @@ This is a dependency-free browser game. Prefer focused changes in:
 
 ## Working Rules
 
-- Keep the game playable by opening `index.html` through a local HTTP server.
+- Keep the game playable through a local HTTP server during normal development.
+- When running under Symphony, follow `WORKFLOW.md` if it narrows verification and forbids starting a server.
 - Preserve keyboard and pointer controls.
 - Keep UI text concise and avoid instructional walls in the game surface.
 - Use Canvas for gameplay rendering.

@@ -9,6 +9,7 @@ Created issues:
 - `SYM-6`: https://linear.app/symphony-game/issue/SYM-6/improve-hit-feedback-and-round-summary
 - `SYM-7`: https://linear.app/symphony-game/issue/SYM-7/add-mobile-friendly-aiming-polish
 - `SYM-8`: https://linear.app/symphony-game/issue/SYM-8/add-lightweight-audio-toggle
+- Next rerun candidate: add the issue below as a fresh `SYM-*` item.
 
 These issues are intentionally small so Symphony can run one agent at a time.
 
@@ -85,3 +86,27 @@ Acceptance criteria:
 - Game works normally when audio is disabled or unavailable.
 - No external audio files are required.
 - `npm test` passes.
+
+## Issue 6: Add accessible labels for touch controls
+
+Description:
+
+Make the mobile touch controls easier to understand for assistive technology
+without changing the visible game UI. Add explicit ARIA labels to the Draw and
+Fire touch buttons, then extend the static validation script so this
+accessibility affordance is covered by `npm test`.
+
+Acceptance criteria:
+
+- The `#draw` button has `aria-label="Draw bow"`.
+- The `#fire` button has `aria-label="Fire arrow"`.
+- The visible button text stays `Draw` and `Fire`.
+- `scripts/validate.mjs` checks the two ARIA labels.
+- `npm test` passes.
+
+Recommended Symphony handoff:
+
+- Create or reuse a GitHub PR through `npm run github:pr`.
+- Move the Linear issue to `Human Review` if that state exists.
+- If `Human Review` does not exist, move it to `Done` and state in the comment
+  that `Done` means ready for human review in this PoC.
