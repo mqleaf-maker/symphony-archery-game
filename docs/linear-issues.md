@@ -9,7 +9,7 @@ Created issues:
 - `SYM-6`: https://linear.app/symphony-game/issue/SYM-6/improve-hit-feedback-and-round-summary
 - `SYM-7`: https://linear.app/symphony-game/issue/SYM-7/add-mobile-friendly-aiming-polish
 - `SYM-8`: https://linear.app/symphony-game/issue/SYM-8/add-lightweight-audio-toggle
-- Next rerun candidate: add the issue below as a fresh `SYM-*` item.
+- `SYM-9`: https://linear.app/symphony-game/issue/SYM-9/add-accessible-labels-for-touch-controls
 
 These issues are intentionally small so Symphony can run one agent at a time.
 
