@@ -19,6 +19,12 @@ Open `http://localhost:5173`.
 npm test
 ```
 
+## Run Symphony
+
+```bash
+./scripts/run-symphony.sh
+```
+
 ## Controls
 
 - Move the pointer to aim.
